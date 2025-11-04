@@ -168,11 +168,11 @@ jobs:
             
             echo "Found coverage file: $COVERAGE_FILE"
             
-            # With global token, explicitly specify slug
+            # Use bash uploader with explicit slug override
             bash <(curl -s https://codecov.io/bash) \
               -t "${CODECOV_TOKEN}" \
               -f "${COVERAGE_FILE}" \
-              -R pnagoorkar/Baubit.Identity \
+              -r pnagoorkar/Baubit.Identity \
               -F unittests \
               -v
 
