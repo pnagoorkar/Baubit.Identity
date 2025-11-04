@@ -159,7 +159,6 @@ jobs:
       - run:
           name: Upload Coverage to Codecov
           command: |
-            # Find the coverage file (it's typically in a subdirectory with a GUID)
             COVERAGE_FILE=$(find ./TestResults -name "coverage.opencover.xml" | head -n 1)
             
             if [ -z "$COVERAGE_FILE" ]; then
@@ -169,10 +168,11 @@ jobs:
             
             echo "Found coverage file: $COVERAGE_FILE"
             
-            # Use bash uploader (more reliable, auto-detects repo info from git)
+            # With global token, explicitly specify slug
             bash <(curl -s https://codecov.io/bash) \
               -t "${CODECOV_TOKEN}" \
               -f "${COVERAGE_FILE}" \
+              -R pnagoorkar/Baubit.Identity \
               -F unittests \
               -v
 
