@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Baubit.Identity\Baubit.Identity.csproj" />
+    <ProjectReference Include="..\Baubit.Identity\Baubit.Identity.csproj" />
   </ItemGroup>
 
   <ItemGroup>
