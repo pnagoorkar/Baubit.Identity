@@ -169,16 +169,12 @@ jobs:
             
             echo "Found coverage file: $COVERAGE_FILE"
             
-            # Download and run Codecov uploader
-            curl -Os https://uploader.codecov.io/latest/linux/codecov
-            chmod +x codecov
-            ./codecov \
-              -t ${CODECOV_TOKEN} \
-              -f ${COVERAGE_FILE} \
-              -r pnagoorkar/Baubit.Identity \
-              -b ${CIRCLE_BUILD_NUM} \
-              -C ${CIRCLE_SHA1} \
-              -B ${CIRCLE_BRANCH}
+            # Use bash uploader (more reliable, auto-detects repo info from git)
+            bash <(curl -s https://codecov.io/bash) \
+              -t "${CODECOV_TOKEN}" \
+              -f "${COVERAGE_FILE}" \
+              -F unittests \
+              -v
 
 #======================================= End Test ====================================
 
