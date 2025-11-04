@@ -86,7 +86,8 @@ Standard `Guid.CreateVersion7()` generates identifiers with millisecond-precisio
 var timestamp = DateTimeOffset.UtcNow;
 
 // Standard GuidV7 - may have duplicate timestamps
-var standardIds = Parallel.For(0, 100, _ => Guid.CreateVersion7(timestamp));
+var standardIds = new ConcurrentBag<Guid>();
+Parallel.For(0, 100, _ => standardIds.Add(Guid.CreateVersion7(timestamp)));
 var distinctTimestamps = standardIds.Select(id => id.ExtractTimestampMs()).Distinct().Count();
 // distinctTimestamps == 1 (all have same timestamp)
 
