@@ -1,6 +1,7 @@
 # Baubit.Identity
 
 [![CircleCI](https://dl.circleci.com/status-badge/img/circleci/TpM4QUH8Djox7cjDaNpup5/2zTgJzKbD2m3nXCf5LKvqS/tree/master.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/circleci/TpM4QUH8Djox7cjDaNpup5/2zTgJzKbD2m3nXCf5LKvqS/tree/master)
+[![codecov](https://codecov.io/gh/pnagoorkar/Baubit.Identity/branch/master/graph/badge.svg)](https://codecov.io/gh/pnagoorkar/Baubit.Identity)
 
 A lightweight, high-performance monotonic GuidV7 (UUIDv7) generator for .NET 9.0+ applications, designed for distributed systems that require strictly increasing unique identifiers.
 
