@@ -168,11 +168,14 @@ jobs:
             
             echo "Found coverage file: $COVERAGE_FILE"
             
-            # Use bash uploader with explicit slug override
+            # Override CircleCI's auto-detected values
+            export CI_REPO_OWNER=pnagoorkar
+            export CI_REPO_NAME=Baubit.Identity
+            
+            # Use bash uploader
             bash <(curl -s https://codecov.io/bash) \
               -t "${CODECOV_TOKEN}" \
               -f "${COVERAGE_FILE}" \
-              -r pnagoorkar/Baubit.Identity \
               -F unittests \
               -v
 
