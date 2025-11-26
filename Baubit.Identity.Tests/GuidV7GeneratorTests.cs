@@ -16,7 +16,7 @@ namespace Baubit.Identity.Tests
         public void CanCreateUsingGuidV7()
         {
             var dateTimeOffset = DateTimeOffset.UtcNow;
-            var reference = Guid.CreateVersion7(dateTimeOffset);
+            var reference = GuidV7.CreateVersion7(dateTimeOffset);
             var guidV7Generator = GuidV7Generator.CreateNew(reference);
             Assert.NotNull(guidV7Generator);
             Assert.Equal(dateTimeOffset.ToUnixTimeMilliseconds(), guidV7Generator.LastIssuedUnixMs);
@@ -46,7 +46,7 @@ namespace Baubit.Identity.Tests
         {
             var initTime = DateTimeOffset.UtcNow;
             var initTimestamp = initTime.ToUnixTimeMilliseconds();
-            var initGuid = Guid.CreateVersion7(initTime);
+            var initGuid = GuidV7.CreateVersion7(initTime);
             var generator1 = GuidV7Generator.CreateNew(initGuid);
             var generator2 = GuidV7Generator.CreateNew(initGuid);
 
@@ -57,7 +57,7 @@ namespace Baubit.Identity.Tests
 
             var driftTime = initTime.AddHours(1);
 
-            var driftGuid = Guid.CreateVersion7(driftTime);
+            var driftGuid = GuidV7.CreateVersion7(driftTime);
 
             generator2.InitializeFrom(driftGuid); // tell the generator we want generated ids to have a timestamp AFTER the drifted time
             var driftTimestamp = driftTime.ToUnixTimeMilliseconds();
@@ -94,7 +94,7 @@ namespace Baubit.Identity.Tests
 
             var parallelLoopResult = Parallel.For(0, numOfIds, _ =>
             {
-                ids.Add(Guid.CreateVersion7(at));
+                ids.Add(GuidV7.CreateVersion7(at));
                 monotonicIds.Add(guidV7Generator.GetNext(at));
             });
 
@@ -114,7 +114,7 @@ namespace Baubit.Identity.Tests
         {
             var monotonicIds = new ConcurrentBag<Guid>();
             var at = DateTimeOffset.UtcNow;
-            var reference = Guid.CreateVersion7(at);
+            var reference = GuidV7.CreateVersion7(at);
             var guidV7Generator = GuidV7Generator.CreateNew(reference);
             var parallelLoopResult = Parallel.For(0, numOfIds, _ =>
             {
