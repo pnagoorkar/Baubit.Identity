@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Known Vulnerabilities](https://snyk.io/test/github/pnagoorkar/Baubit.Identity/badge.svg)](https://snyk.io/test/github/pnagoorkar/Baubit.Identity)
 
-A monotonic GuidV7 (UUIDv7) generator for .NET Standard 2.0+. Generates strictly increasing unique identifiers for distributed systems.
+A monotonic GuidV7 (UUIDv7) generator for .NET. Generates strictly increasing unique identifiers for distributed systems.
 
 ## Features
 
