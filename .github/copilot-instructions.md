@@ -1,196 +1,332 @@
-# Copilot Instructions for Baubit.Identity
+# GitHub Copilot Instructions for Baubit Components
 
-## Project Overview
+## About Baubit Component Libraries
 
-Baubit.Identity is a standalone .NET library that provides a monotonic GuidV7 (UUIDv7) generator designed for distributed systems. This component was extracted from the main [Baubit framework](https://github.com/pnagoorkar/Baubit) as part of a componentization effort to create focused, zero-dependency packages.
+This is part of the **Baubit framework** - a collection of focused, componentized .NET libraries designed for distributed systems and enterprise applications. Each component follows a strict philosophy of:
 
-## Core Purpose
+- **Zero or minimal external dependencies** - Components are self-contained and lightweight
+- **Single responsibility** - Each library solves one problem well
+- **High performance** - Optimized for production workloads with minimal allocations
+- **Thread safety** - All public APIs are thread-safe by design
+- **Production ready** - Comprehensive testing, CI/CD, and monitoring
 
-The library solves a critical problem: standard `Guid.CreateVersion7()` generates identifiers with millisecond-precision timestamps that can have duplicate values when created concurrently. This causes ordering issues in distributed systems, databases with time-based sharding, and any scenario requiring guaranteed ordering.
+## Technology Stack
 
-**Baubit.Identity** ensures:
-- Strictly increasing timestamps even under concurrent load
-- Thread-safe generation using lock-free atomic operations
-- Optional drift protection to handle clock skew
-- Zero external dependencies (only .NET 9.0 standard library)
+- **Target Framework**: .NET Standard 2.0 (for broad compatibility) and .NET 9.0 (for modern features)
+- **Language**: C# with language features compatible with .NET Standard 2.0
+- **Testing**: xUnit with comprehensive unit and integration tests
+- **CI/CD**: CircleCI with automated build, test, and publish pipelines
+- **Package Distribution**: NuGet (GitHub Packages for pre-release, NuGet.org for releases)
+- **Code Coverage**: Codecov integration with quality gates
+- **Security**: Snyk.io monitoring for vulnerabilities
 
 ## Project Structure
 
+All Baubit components follow a consistent structure:
+
 ```
-Baubit.Identity/
-├── Baubit.Identity/              # Main library project
-│   ├── GuidV7Generator.cs        # Core monotonic GUID generator
-│   └── Baubit.Identity.csproj    # Project file targeting .NET 9.0
-├── Baubit.Identity.Tests/        # Unit tests
-│   ├── GuidV7GeneratorTests.cs   # Comprehensive test suite (8 tests)
-│   └── Baubit.Identity.Tests.csproj
-├── .circleci/                    # CI/CD configuration
-│   └── config.yml                # Build, test, pack, and publish pipeline
-├── Baubit.Identity.sln           # Solution file
-├── README.md                     # Comprehensive documentation
-└── LICENSE                       # MIT License
+Baubit.{ComponentName}/
+├── Baubit.{ComponentName}/              # Main library project
+│   ├── {Core classes and interfaces}
+│   └── Baubit.{ComponentName}.csproj    # Multi-targets .NET Standard 2.0 and .NET 9.0
+├── Baubit.{ComponentName}.Test/        # Test project
+│   ├── {Test classes}
+│   └── Baubit.{ComponentName}.Test.csproj
+├── .circleci/                           # CI/CD configuration
+│   └── config.yml                       # Build, test, pack, publish pipeline
+├── Baubit.{ComponentName}.sln           # Solution file
+├── README.md                            # Comprehensive documentation
+├── codecov.yml                          # Code coverage configuration
+├── LICENSE                              # MIT License
+└── .github/
+    └── copilot-instructions.md          # This file
 ```
 
-## Key Components
+## Coding Standards
 
-### GuidV7Generator Class
+### C# Style and Conventions
 
-**Purpose**: Generate monotonic UUIDv7 identifiers that strictly increase in timestamp order.
+1. **Modern C# Features**
+   - Use C# 7.3 features (compatible with .NET Standard 2.0)
+   - Enable nullable reference types where supported: `<Nullable>enable</Nullable>`
+   - Use tuples for returning multiple values
+   - Use pattern matching (basic forms available in C# 7.3)
+   - Leverage `readonly struct` for value types to prevent mutations
+   - **Avoid**: Primary constructors, collection expressions, required members, file-scoped types (C# 10+)
+   - **Avoid**: Default interface implementations (C# 8+)
+   - **Avoid**: Records (C# 9+) - use classes or structs instead
 
-**Key Features**:
-- Lock-free thread-safe implementation using `Volatile.Read`, `Interlocked.CompareExchange`
-- Internal counter that advances timestamps to ensure uniqueness
-- Optional drift protection with configurable maximum drift and behavior (throw vs clamp)
-- Seeding capability from existing GuidV7 or timestamp
+2. **Naming Conventions**
+   - PascalCase for public members, types, and namespaces
+   - camelCase for private fields (no underscore prefix except for backing fields)
+   - Prefix interfaces with `I` (e.g., `IValidator`); abstract classes with `A` (e.g., `AValidator`)
+   - Suffix async methods with `Async` (e.g., `ValidateAsync`)
+   - Use meaningful, descriptive names - avoid abbreviations
 
-**Factory Methods**:
-- `CreateNew()` - Create with current time
-- `CreateNew(Guid existingV7)` - Seed from existing UUIDv7
+3. **Code Organization**
+   - One type per file (exceptions for nested types)
+   - Group related functionality in namespaces matching folder structure
+   - Keep classes focused - prefer composition over large inheritance hierarchies
+   - Order class members: constants, fields, constructors, properties, methods
+   - Group by access modifier (public → protected → private)
 
-**Instance Methods**:
-- `GetNext()` - Generate next GUID using current UTC time
-- `GetNext(DateTimeOffset)` - Generate with specific timestamp (for testing/replay)
-- `InitializeFrom(Guid)` - Seed generator from existing GUID
-- `InitializeFrom(DateTimeOffset)` - Seed from specific timestamp
+4. **Documentation**
+   - XML documentation comments for ALL public APIs
+   - Include `<summary>`, `<param>`, `<returns>`, and `<exception>` tags
+   - Provide code examples in `<example>` tags for complex APIs
+   - Document thread-safety guarantees explicitly
+   - Explain performance characteristics for critical paths
 
-**Static Methods**:
-- `TryGetUnixMs(Guid, out long)` - Extract 48-bit Unix milliseconds from UUIDv7
+### Architecture Principles
 
-### GuidV7Extensions
+1. **Dependency Management**
+   - **CRITICAL**: Minimize external dependencies - each dependency is a liability
+   - Prefer .NET Standard 2.0 compatible APIs
+   - If dependencies are required, ensure they support .NET Standard 2.0
+   - Never add dependencies for convenience - only for essential functionality
+   - Keep the dependency graph flat - avoid transitive dependency chains
 
-**Extension Method**:
-- `ExtractTimestampMs(this Guid)` - Convenient extension to extract timestamp from any Guid
+2. **Thread Safety**
+   - All public APIs MUST be thread-safe unless explicitly documented otherwise
+   - Prefer lock-free algorithms using atomic operations:
+     - `Volatile.Read()` and `Volatile.Write()` for visibility
+     - `Interlocked.CompareExchange()` for atomic updates
+     - Avoid `lock` statements in hot paths - use only when necessary
+   - Document thread-safety guarantees in XML comments
+   - Include concurrent tests for all shared state
 
-## Development Guidelines
+3. **Performance**
+   - Minimize allocations - prefer value types and object pooling
+   - Avoid LINQ in hot paths - use for loops for performance-critical code
+   - Use `Span<T>` and `Memory<T>` only when targeting .NET 9.0 specifically (use preprocessor directives)
+   - Profile before optimizing - measure don't guess
+   - **Note**: Stack allocation and advanced memory APIs are limited in .NET Standard 2.0
 
-### When Making Changes
+4. **Error Handling**
+   - Use exception filters and specific exception types
+   - Never swallow exceptions - log or rethrow with context
+   - Validate inputs early - fail fast at public API boundaries
+   - Provide detailed exception messages with actionable information
 
-1. **Preserve Zero Dependencies**: This library must have NO external dependencies beyond .NET 9.0 standard library. Do not add NuGet packages.
+5. **API Design**
+   - Follow Microsoft's Framework Design Guidelines
+   - Design for extension - prefer virtual/abstract for extensibility points
+   - Keep public surface area minimal - internal by default
+   - Version APIs carefully - breaking changes require major version bumps
+   - Provide both sync and async variants where I/O is involved
+   - Use factory methods for complex initialization
 
-2. **Thread Safety is Critical**: All changes to `GuidV7Generator` must maintain thread safety. Use atomic operations, never add locks.
+## Testing Standards
 
-3. **Performance Matters**: This is designed for high-throughput scenarios. Avoid allocations, keep operations minimal.
+### Test Structure
 
-4. **RFC 9562 Compliance**: Any changes must maintain compliance with the UUIDv7 specification.
+1. **Test Organization**
+   - Mirror source project structure in test project
+   - One test class per source class: `{ClassName}.Test` in`{ClassName}/Test.cs`
+   - Group tests by feature using nested classes or clear method names
+   - Use descriptive test method names: `MethodName_Scenario_ExpectedBehavior`
 
-5. **Backward Compatibility**: Public API changes require careful consideration as this is a published package.
+2. **Test Coverage Requirements**
+   - Minimum 80% code coverage for new code (enforced by Codecov)
+   - 100% coverage for critical paths (security, data integrity)
+   - Test all public APIs with multiple scenarios
+   - Include edge cases: null inputs, empty collections, boundary values
+   - Add regression tests for all bugs discovered
 
-### Testing Requirements
+3. **Test Types**
+   - **Unit Tests**: Isolated tests with no external dependencies
+   - **Integration Tests**: Test component interactions (use Testcontainers if needed)
+   - **Concurrent Tests**: Verify thread safety using parallel execution
+   - **Performance Tests**: Benchmark critical operations (optional, documented)
 
-- All new features must have corresponding unit tests
-- Tests use `xunit` framework
-- Concurrent tests verify thread safety (using `ConcurrentBag<Guid>` for collection)
-- All 8 existing tests must continue to pass
-- Run tests with: `dotnet test`
+4. **Test Patterns**
+   - Use AAA pattern: Arrange, Act, Assert
+   - One logical assertion per test (multiple physical asserts are OK)
+   - Use xUnit's `[Theory]` and `[InlineData]` for parameterized tests
+   - Use xUnit's built-in assertions consistently
+   - Mock external dependencies using interfaces
 
-### Build Process
+### Example Test Structure
 
-- Target framework: .NET 9.0
-- Build command: `dotnet build`
-- Test command: `dotnet test`
-- Solution file at root manages both projects
+```csharp
+namespace Baubit.Identity.Test.GuidV7Generator
+{
+    public class Test
+    {
+        [Fact]
+        public void GetNext_GeneratesMonotonicGuids_WhenCalledConcurrently()
+        {
+            // Arrange
+            var generator = GuidV7Generator.CreateNew();
+            var guids = new ConcurrentBag<Guid>();
 
-### Documentation Standards
+            // Act
+            Parallel.For(0, 1000, _ => guids.Add(generator.GetNext()));
 
-- XML documentation comments for all public APIs
-- README.md must be kept up-to-date with API changes
-- Code examples in README should be working code
-- Include use cases and performance characteristics
+            // Assert
+            Assert.Equal(1000, guids.Distinct().Count());
+        }
+    }
+}
+```
 
 ## CI/CD Pipeline
 
-CircleCI configuration includes four jobs:
+### CircleCI Workflow
 
-1. **Build**: Compiles the solution using custom Docker image with signing
-2. **Test**: Runs all unit tests (requires Docker for Testcontainers support)
-3. **Pack and Publish**: Creates NuGet package and publishes to GitHub packages (master branch only)
-4. **Release**: Publishes to nuget.org (release branch only)
+All Baubit components use a standardized CircleCI pipeline with four jobs:
 
-**Important**: Solution folder name is `Baubit.Identity` in CircleCI parameters.
+1. **build**: Compiles the .NET solution using custom Docker image with code signing
+2. **test**: Runs all tests with code coverage reporting to Codecov
+3. **pack_and_publish**: Creates and publishes NuGet packages to GitHub Packages (master branch only)
+4. **release**: Publishes to NuGet.org (release branch only)
 
-## Common Tasks
+### Pipeline Configuration
 
-### Adding a New Method to GuidV7Generator
+- Solution and project names are parameterized in `.circleci/config.yml`
+- All jobs require the `Context_Prashant` CircleCI context for credentials
+- Codecov token format: `CODECOV_TOKEN_{PROJECT_NAME}` (dots replaced with underscores)
+- Branch protection on master and release branches
+- Automated GitHub releases created when merging master to release
 
-1. Add XML documentation comment
-2. Implement using lock-free operations if touching `_lastMs`
-3. Add comprehensive unit tests including concurrent scenarios
-4. Update README.md API reference section
-5. Run full test suite to verify no regression
+### Release Process
 
-### Modifying Timestamp Extraction
+**To create a new release:**
 
-1. Verify RFC 9562 compliance for bit layout
-2. Test with edge cases (min/max timestamps)
-3. Ensure `TryGetUnixMs` returns false for non-v7 GUIDs
-4. Update extension method if needed
+1. Ensure all changes are merged to `master` and CI passes
+2. Create a pull request from `master` to `release`
+3. **IMPORTANT**: PR title and description become the release notes - make them detailed and accurate
+4. After PR is merged:
+   - GitHub release is automatically created with PR notes
+   - NuGet package is published to nuget.org
+   - Release tags are created automatically
+
+#### Generating Release Notes
+
+When asked to generate release notes, analyze commits on `master` branch since the latest release tag. Format:
+
+**Added**
+- New features and public APIs
+
+**Changed**
+- Modified behavior and API changes
+
+**Fixed**
+- Bug fixes and corrections
+
+**Removed**
+- Deprecated/removed features and APIs
+
+**Breaking Changes**
+- API changes requiring code updates
+
+Focus on what users need to know: feature changes, API modifications, and behavioral updates. Omit internal implementation details, file names, and commit SHAs. Keep descriptions factual and concise. No fluff.
+
+### Pre-commit Checklist
+
+Before committing code:
+- [ ] All tests pass locally: `dotnet test`
+- [ ] Code builds without warnings: `dotnet build`
+- [ ] XML documentation added for public APIs
+- [ ] No new external dependencies (or justified if necessary)
+- [ ] Code coverage meets minimum requirements
+- [ ] README.md updated if public API changed
+- [ ] Code compiles for both .NET Standard 2.0 and .NET 9.0 targets
+
+## Common Development Tasks
+
+### Adding a New Public API
+
+1. Design the API following framework design guidelines
+2. Implement with thread safety in mind
+3. Add comprehensive XML documentation
+4. Write unit tests covering all scenarios
+5. Add integration tests if API interacts with other components
+6. Update README.md with API reference and examples
+7. Consider backward compatibility and versioning
+8. Ensure compatibility with .NET Standard 2.0
+
+### Modifying Existing APIs
+
+1. Always add tests for modified behavior
+2. Update documentation to reflect changes
+3. Test against both .NET Standard 2.0 and .NET 9.0 targets
+
+### Adding Dependencies
+
+**ONLY add dependencies if absolutely necessary.** Before adding:
+
+1. Justify why the dependency is essential
+2. Evaluate the dependency's stability and maintenance
+3. Check for security vulnerabilities
+4. Ensure it supports .NET Standard 2.0
+5. Document the decision in PR description
+6. Update README.md dependencies section
 
 ### Performance Optimization
 
-1. Profile before optimizing
-2. Avoid allocations in hot paths
-3. Benchmark concurrent scenarios
-4. Verify thread safety with stress tests
-5. Document performance characteristics in README
+1. Profile first - identify bottlenecks with data
+2. Write benchmarks using BenchmarkDotNet (optional but recommended)
+3. Test before and after performance changes
+4. Document performance improvements in PR
+5. Ensure optimizations don't sacrifice readability or maintainability
+6. Consider caching, object pooling, or lazy initialization patterns
+7. Use preprocessor directives for target-specific optimizations
 
-## Edge Cases to Consider
+## Documentation Standards
 
-- **Clock Rollback**: Generator handles by continuing from last issued timestamp
-- **Drift Cap**: Optional limit prevents excessive future drift
-- **Concurrent Creation**: Atomic operations ensure unique timestamps
-- **Non-v7 GUIDs**: `TryGetUnixMs` properly returns false
-- **Timestamp Overflow**: 48-bit timestamp valid until year ~10889
+### README.md Structure
 
-## Package Metadata
+Every component README should include:
 
-- **Package ID**: `Baubit.Identity`
-- **Authors**: Prashant Nagoorkar
-- **Repository**: https://github.com/pnagoorkar/Baubit.Identity
-- **License**: MIT
-- **Tags**: guid, uuid, guidv7, uuidv7, distributed, monotonic, timestamp
+1. **Overview**: What problem does this component solve?
+2. **Installation**: NuGet package installation instructions
+3. **Quick Start**: Simple code example to get started
+4. **Features**: Key capabilities and use cases
+5. **API Reference**: Public API documentation with examples
+6. **Performance**: Characteristics and benchmarks (if relevant)
+7. **Thread Safety**: Guarantees and considerations
+8. **Contributing**: Link to contribution guidelines
+9. **License**: MIT License reference
 
-## Related Projects
+### Code Examples
 
-- **Main Framework**: [Baubit](https://github.com/pnagoorkar/Baubit) - The framework this was extracted from
-- **Component Breakdown**: See [COMPONENT_BREAKDOWN_ANALYSIS.md](https://github.com/pnagoorkar/Baubit/blob/copilot/breakdown-components-repo-structure/COMPONENT_BREAKDOWN_ANALYSIS.md) for extraction strategy
+- Use complete, working code examples
+- Include necessary `using` statements
+- Show realistic usage scenarios
+- Provide both simple and advanced examples
+- Test examples to ensure they compile and run
+- Ensure examples work with .NET Standard 2.0
 
-## Design Decisions
+## Security Practices
 
-### Why Lock-Free?
+1. **Input Validation**: Validate all public API inputs
+2. **No Secrets in Code**: Use environment variables or Azure Key Vault
+3. **Dependency Scanning**: Snyk.io monitors for vulnerabilities
+4. **Least Privilege**: Request minimum required permissions
+5. **Secure Defaults**: APIs should be secure by default
+6. **Regular Updates**: Keep dependencies and .NET runtime updated
 
-Lock-free design using `Interlocked.CompareExchange` provides:
-- Better scalability under high concurrency
-- No risk of deadlocks
-- Predictable performance characteristics
-- Spin-wait is acceptable given fast operations
+## Continuous Improvement
 
-### Why Optional Drift Protection?
+This document should evolve with the project. When you identify:
 
-Allows users to choose between:
-- **No cap**: Maximizes throughput, accepts any drift
-- **Clamping**: Limits drift but continues generating IDs
-- **Throwing**: Fails fast when drift exceeds threshold
+- New patterns or best practices
+- Common pitfalls or mistakes
+- Improved workflows or tools
+- Better ways to structure code
 
-Different applications have different requirements.
+**Submit a PR to update these instructions** to keep them current and valuable for all contributors.
 
-### Why Separate Extension Class?
+## Additional Resources
 
-`GuidV7Extensions` in separate static class follows C# conventions for extension methods while keeping core `GuidV7Generator` focused.
+- [.NET API Design Guidelines](https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/)
+- [C# Coding Conventions](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions)
+- [.NET Standard 2.0 API Reference](https://learn.microsoft.com/en-us/dotnet/standard/net-standard)
+- [xUnit Documentation](https://xunit.net/)
+- [CircleCI .NET Docs](https://circleci.com/docs/language-dotnet/)
+- [Semantic Versioning](https://semver.org/)
 
-## Anti-Patterns to Avoid
+---
 
-❌ Do not add external dependencies  
-❌ Do not use locks or other blocking synchronization  
-❌ Do not allocate in hot paths (generator methods)  
-❌ Do not break thread safety assumptions  
-❌ Do not modify public API without careful consideration  
-❌ Do not skip concurrent testing  
-❌ Do not assume sequential execution  
-
-## Questions or Issues?
-
-For questions about:
-- **Architecture**: Refer to component breakdown analysis
-- **Usage**: Check README.md examples
-- **Implementation**: Review inline code comments and tests
-- **Performance**: See benchmark results in README
+**Remember**: Baubit components are designed to be production-grade, high-performance building blocks that support broad compatibility through .NET Standard 2.0 while leveraging modern features when targeting .NET 9.0. Every line of code should reflect this commitment to quality, simplicity, and reliability.
