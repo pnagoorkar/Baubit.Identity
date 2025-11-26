@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
@@ -11,7 +11,7 @@
     <RepositoryUrl>https://github.com/pnagoorkar/Baubit.Identity</RepositoryUrl>
     <Authors>Prashant Nagoorkar</Authors>
     <Description>A monotonic GuidV7 generator for distributed systems. Generates strictly increasing UUIDs based on timestamps with built-in drift protection.</Description>
-    <PackageTags>guid;uuid;guidv7;uuidv7;distributed;monotonic;timestamp</PackageTags>
+    <PackageTags>guid;uuid;guidv7;uuidv7;distributed;monotonic;timestamp;baubit</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
