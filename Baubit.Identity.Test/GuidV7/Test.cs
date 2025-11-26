@@ -1,14 +1,13 @@
-using Baubit.Identity;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 
-namespace Baubit.Identity.Tests
+namespace Baubit.Identity.Test.GuidV7
 {
-    public class GuidV7Tests
+    public class Test
     {
         [Fact]
         public void CreateVersion7_HasCorrectVersionBits()
         {
-            var guid = GuidV7.CreateVersion7();
+            var guid = Identity.GuidV7.CreateVersion7();
             byte[] bytes = guid.ToByteArray();
 
             // Version bits are in byte 7 (high nibble) in ToByteArray() output
@@ -19,7 +18,7 @@ namespace Baubit.Identity.Tests
         [Fact]
         public void CreateVersion7_HasCorrectVariantBits()
         {
-            var guid = GuidV7.CreateVersion7();
+            var guid = Identity.GuidV7.CreateVersion7();
             byte[] bytes = guid.ToByteArray();
 
             // Variant bits are in byte 8 (high 2 bits should be 10)
@@ -33,31 +32,31 @@ namespace Baubit.Identity.Tests
             var timestamp = DateTimeOffset.UtcNow;
             var expectedMs = timestamp.ToUnixTimeMilliseconds();
 
-            var guid = GuidV7.CreateVersion7(timestamp);
+            var guid = Identity.GuidV7.CreateVersion7(timestamp);
 
-            Assert.True(GuidV7.TryGetUnixMs(guid, out long extractedMs));
+            Assert.True(Identity.GuidV7.TryGetUnixMs(guid, out long extractedMs));
             Assert.Equal(expectedMs, extractedMs);
         }
 
         [Fact]
         public void IsVersion7_ReturnsTrueForVersion7Guid()
         {
-            var guid = GuidV7.CreateVersion7();
-            Assert.True(GuidV7.IsVersion7(guid));
+            var guid = Identity.GuidV7.CreateVersion7();
+            Assert.True(Identity.GuidV7.IsVersion7(guid));
         }
 
         [Fact]
         public void IsVersion7_ReturnsFalseForRandomGuid()
         {
             var guid = Guid.NewGuid(); // This creates a version 4 GUID
-            Assert.False(GuidV7.IsVersion7(guid));
+            Assert.False(Identity.GuidV7.IsVersion7(guid));
         }
 
         [Fact]
         public void TryGetUnixMs_ReturnsFalseForNonVersion7Guid()
         {
             var guid = Guid.NewGuid();
-            Assert.False(GuidV7.TryGetUnixMs(guid, out long ms));
+            Assert.False(Identity.GuidV7.TryGetUnixMs(guid, out long ms));
             Assert.Equal(0, ms);
         }
 
@@ -67,9 +66,9 @@ namespace Baubit.Identity.Tests
             var now = DateTimeOffset.UtcNow;
             var expectedMs = now.ToUnixTimeMilliseconds();
 
-            var guid = GuidV7.CreateVersion7(now);
+            var guid = Identity.GuidV7.CreateVersion7(now);
 
-            Assert.True(GuidV7.TryGetUnixMs(guid, out long extractedMs));
+            Assert.True(Identity.GuidV7.TryGetUnixMs(guid, out long extractedMs));
             Assert.Equal(expectedMs, extractedMs);
         }
 
@@ -81,7 +80,7 @@ namespace Baubit.Identity.Tests
 
             for (int i = 0; i < count; i++)
             {
-                var guid = GuidV7.CreateVersion7();
+                var guid = Identity.GuidV7.CreateVersion7();
                 Assert.True(guids.Add(guid), $"Duplicate GUID generated at iteration {i}");
             }
 
@@ -96,7 +95,7 @@ namespace Baubit.Identity.Tests
 
             Parallel.For(0, count, _ =>
             {
-                guids.Add(GuidV7.CreateVersion7());
+                guids.Add(Identity.GuidV7.CreateVersion7());
             });
 
             Assert.Equal(count, guids.Count);
@@ -107,9 +106,9 @@ namespace Baubit.Identity.Tests
         public void CreateVersion7_EpochTime_EncodesCorrectly()
         {
             var epoch = DateTimeOffset.UnixEpoch;
-            var guid = GuidV7.CreateVersion7(epoch);
+            var guid = Identity.GuidV7.CreateVersion7(epoch);
 
-            Assert.True(GuidV7.TryGetUnixMs(guid, out long ms));
+            Assert.True(Identity.GuidV7.TryGetUnixMs(guid, out long ms));
             Assert.Equal(0, ms);
         }
 
@@ -120,9 +119,9 @@ namespace Baubit.Identity.Tests
             var futureTime = new DateTimeOffset(2100, 1, 1, 0, 0, 0, TimeSpan.Zero);
             var expectedMs = futureTime.ToUnixTimeMilliseconds();
 
-            var guid = GuidV7.CreateVersion7(futureTime);
+            var guid = Identity.GuidV7.CreateVersion7(futureTime);
 
-            Assert.True(GuidV7.TryGetUnixMs(guid, out long ms));
+            Assert.True(Identity.GuidV7.TryGetUnixMs(guid, out long ms));
             Assert.Equal(expectedMs, ms);
         }
 
@@ -137,9 +136,9 @@ namespace Baubit.Identity.Tests
                 var time = baseTime.AddMilliseconds(i);
                 var expectedMs = time.ToUnixTimeMilliseconds();
 
-                var guid = GuidV7.CreateVersion7(time);
+                var guid = Identity.GuidV7.CreateVersion7(time);
 
-                Assert.True(GuidV7.TryGetUnixMs(guid, out long ms));
+                Assert.True(Identity.GuidV7.TryGetUnixMs(guid, out long ms));
                 Assert.Equal(expectedMs, ms);
             }
         }
@@ -154,14 +153,14 @@ namespace Baubit.Identity.Tests
             for (int i = 0; i < 100; i++)
             {
                 var time = baseTime.AddMilliseconds(i);
-                guids.Add(GuidV7.CreateVersion7(time));
+                guids.Add(Identity.GuidV7.CreateVersion7(time));
             }
 
             // Verify timestamps are in order
             for (int i = 1; i < guids.Count; i++)
             {
-                GuidV7.TryGetUnixMs(guids[i - 1], out long prevMs);
-                GuidV7.TryGetUnixMs(guids[i], out long currMs);
+                Identity.GuidV7.TryGetUnixMs(guids[i - 1], out long prevMs);
+                Identity.GuidV7.TryGetUnixMs(guids[i], out long currMs);
 
                 Assert.True(currMs >= prevMs, $"GUID at index {i} has earlier timestamp than index {i - 1}");
             }
@@ -173,7 +172,7 @@ namespace Baubit.Identity.Tests
             var timestamp = new DateTimeOffset(2024, 1, 15, 12, 30, 45, 123, TimeSpan.Zero);
             var expectedMs = timestamp.ToUnixTimeMilliseconds();
 
-            var guid = GuidV7.CreateVersion7(timestamp);
+            var guid = Identity.GuidV7.CreateVersion7(timestamp);
             byte[] bytes = guid.ToByteArray();
 
             // Verify version (byte 7, high nibble)
@@ -183,7 +182,7 @@ namespace Baubit.Identity.Tests
             Assert.Equal(0x80, bytes[8] & 0xC0);
 
             // Verify timestamp extraction matches
-            Assert.True(GuidV7.TryGetUnixMs(guid, out long extractedMs));
+            Assert.True(Identity.GuidV7.TryGetUnixMs(guid, out long extractedMs));
             Assert.Equal(expectedMs, extractedMs);
         }
 
@@ -192,8 +191,8 @@ namespace Baubit.Identity.Tests
         {
             for (int i = 0; i < 1000; i++)
             {
-                var guid = GuidV7.CreateVersion7();
-                Assert.True(GuidV7.IsVersion7(guid), $"GUID at iteration {i} is not version 7");
+                var guid = Identity.GuidV7.CreateVersion7();
+                Assert.True(Identity.GuidV7.IsVersion7(guid), $"GUID at iteration {i} is not version 7");
             }
         }
 
@@ -205,9 +204,9 @@ namespace Baubit.Identity.Tests
         public void CreateVersion7_VariousTimestamps_RoundTrip(long unixMs)
         {
             var timestamp = DateTimeOffset.FromUnixTimeMilliseconds(unixMs);
-            var guid = GuidV7.CreateVersion7(timestamp);
+            var guid = Identity.GuidV7.CreateVersion7(timestamp);
 
-            Assert.True(GuidV7.TryGetUnixMs(guid, out long extractedMs));
+            Assert.True(Identity.GuidV7.TryGetUnixMs(guid, out long extractedMs));
             Assert.Equal(unixMs, extractedMs);
         }
 
@@ -215,7 +214,7 @@ namespace Baubit.Identity.Tests
         public void TryGetUnixMs_EmptyGuid_ReturnsFalse()
         {
             var emptyGuid = Guid.Empty;
-            Assert.False(GuidV7.TryGetUnixMs(emptyGuid, out long ms));
+            Assert.False(Identity.GuidV7.TryGetUnixMs(emptyGuid, out long ms));
             Assert.Equal(0, ms);
         }
 
@@ -223,12 +222,12 @@ namespace Baubit.Identity.Tests
         public void CreateVersion7_WithSameTimestamp_GeneratesDifferentRandomBits()
         {
             var timestamp = DateTimeOffset.UtcNow;
-            var guid1 = GuidV7.CreateVersion7(timestamp);
-            var guid2 = GuidV7.CreateVersion7(timestamp);
+            var guid1 = Identity.GuidV7.CreateVersion7(timestamp);
+            var guid2 = Identity.GuidV7.CreateVersion7(timestamp);
 
             // Both should have the same timestamp
-            GuidV7.TryGetUnixMs(guid1, out long ms1);
-            GuidV7.TryGetUnixMs(guid2, out long ms2);
+            Identity.GuidV7.TryGetUnixMs(guid1, out long ms1);
+            Identity.GuidV7.TryGetUnixMs(guid2, out long ms2);
             Assert.Equal(ms1, ms2);
 
             // But they should be different GUIDs (different random parts)
@@ -240,16 +239,16 @@ namespace Baubit.Identity.Tests
         {
             // Test that GUIDs from GuidV7.CreateVersion7 work with GuidV7Generator
             var timestamp = DateTimeOffset.UtcNow;
-            var seedGuid = GuidV7.CreateVersion7(timestamp);
+            var seedGuid = Identity.GuidV7.CreateVersion7(timestamp);
 
-            var generator = GuidV7Generator.CreateNew(seedGuid);
+            var generator = Identity.GuidV7Generator.CreateNew(seedGuid);
             Assert.NotNull(generator);
             Assert.Equal(timestamp.ToUnixTimeMilliseconds(), generator.LastIssuedUnixMs);
 
             // Generator should be able to extract timestamp from its own GUIDs
             var generatedGuid = generator.GetNext();
-            Assert.True(GuidV7.IsVersion7(generatedGuid));
-            Assert.True(GuidV7.TryGetUnixMs(generatedGuid, out _));
+            Assert.True(Identity.GuidV7.IsVersion7(generatedGuid));
+            Assert.True(Identity.GuidV7.TryGetUnixMs(generatedGuid, out _));
         }
     }
 }
