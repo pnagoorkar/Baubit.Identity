@@ -1,3 +1,6 @@
+using System;
+using System.Threading;
+
 namespace Baubit.Identity
 {
     public sealed class GuidV7Generator
@@ -6,10 +9,10 @@ namespace Baubit.Identity
         private long _lastMs = -1;
 
         /// <summary>Maximum allowed drift ahead of wall-clock (ms). Null = no cap.</summary>
-        public long? MaxDriftMs { get; init; }
+        public long? MaxDriftMs { get; set; }
 
         /// <summary>If true and drift cap is exceeded, throw instead of clamping.</summary>
-        public bool ThrowOnDriftCap { get; init; }
+        public bool ThrowOnDriftCap { get; set; }
 
         private GuidV7Generator(long? maxDriftMs = null, bool throwOnDriftCap = false)
         {
@@ -19,13 +22,13 @@ namespace Baubit.Identity
 
         public static GuidV7Generator CreateNew(long? maxDriftMs = null, bool throwOnDriftCap = false)
         {
-            return CreateNew(Guid.CreateVersion7(), maxDriftMs, throwOnDriftCap);
+            return CreateNew(GuidV7.CreateVersion7(), maxDriftMs, throwOnDriftCap);
         }
 
         /// <summary>Create a generator seeded from the timestamp in an existing UUIDv7.</summary>
         public static GuidV7Generator CreateNew(Guid existingV7, long? maxDriftMs = null, bool throwOnDriftCap = false)
         {
-            if (!TryGetUnixMs(existingV7, out long ms))
+            if (!GuidV7.TryGetUnixMs(existingV7, out long ms))
                 throw new InvalidOperationException("CreateNew(Guid) requires a version 7 GUID.");
 
             var gen = new GuidV7Generator(maxDriftMs, throwOnDriftCap);
@@ -36,7 +39,7 @@ namespace Baubit.Identity
         /// <summary>Seed the generator so future IDs never go backwards.</summary>
         public void InitializeFrom(Guid existingV7)
         {
-            if (!TryGetUnixMs(existingV7, out long ms))
+            if (!GuidV7.TryGetUnixMs(existingV7, out long ms))
                 throw new InvalidOperationException("InitializeFrom(Guid) requires a version 7 GUID.");
             Seed(ms);
         }
@@ -80,30 +83,13 @@ namespace Baubit.Identity
                     break; // reserved "next"
             }
 
-            return Guid.CreateVersion7(DateTimeOffset.FromUnixTimeMilliseconds(next));
+            return GuidV7.CreateVersion7(DateTimeOffset.FromUnixTimeMilliseconds(next));
         }
 
         /// <summary>Extract the Unix milliseconds (48-bit) from a UUIDv7.</summary>
         public static bool TryGetUnixMs(Guid guid, out long ms)
         {
-            if (guid.Version != 7) { ms = 0; return false; }
-
-            Span<byte> be = stackalloc byte[16];
-            if (!guid.TryWriteBytes(be, bigEndian: true, out _))
-            {
-                ms = 0; return false;
-            }
-
-            ulong u =
-                ((ulong)be[0] << 40) |
-                ((ulong)be[1] << 32) |
-                ((ulong)be[2] << 24) |
-                ((ulong)be[3] << 16) |
-                ((ulong)be[4] << 8) |
-                 (ulong)be[5];
-
-            ms = (long)u; // safe: v7 timestamp is 48-bit
-            return true;
+            return GuidV7.TryGetUnixMs(guid, out ms);
         }
     }
 
@@ -111,7 +97,7 @@ namespace Baubit.Identity
     {
         public static long? ExtractTimestampMs(this Guid guid)
         {
-            if (GuidV7Generator.TryGetUnixMs(guid, out var ms))
+            if (GuidV7.TryGetUnixMs(guid, out var ms))
             {
                 return ms;
             }
