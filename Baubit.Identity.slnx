@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="codecov.yml" />
+  </Folder>
+  <Project Path="Baubit.Identity/Baubit.Identity.csproj" />
+  <Project Path="Baubit.Identity.Tests/Baubit.Identity.Tests.csproj" />
+</Solution>

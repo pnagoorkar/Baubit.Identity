@@ -97,15 +97,14 @@ namespace Baubit.Identity
         {
             // The version is stored in the high nibble of byte 6 (in wire format)
             // In .NET Guid, we can extract this from the ToByteArray() output
-            // or by examining the appropriate component
             byte[] bytes = guid.ToByteArray();
 
-            // .NET Guid byte layout (on little-endian systems):
-            // bytes[0-3]: 'a' component (little-endian)
-            // bytes[4-5]: 'b' component (little-endian)
-            // bytes[6-7]: 'c' component (little-endian)
-            // bytes[8-15]: d through k (stored as-is)
-
+            // .NET Guid byte layout (platform-independent, defined by RFC 4122):
+            // bytes[0-3]: 'a' component (stored as little-endian in memory)
+            // bytes[4-5]: 'b' component (stored as little-endian in memory)
+            // bytes[6-7]: 'c' component (stored as little-endian in memory)
+            // bytes[8-15]: d through k (stored as-is, big-endian)
+            //
             // The version bits are in the high nibble of byte 7 in ToByteArray() output
             // because 'c' is stored little-endian, so the high byte of 'c' is at bytes[7]
             int version = (bytes[7] >> 4) & 0x0F;
@@ -128,14 +127,14 @@ namespace Baubit.Identity
 
             byte[] bytes = guid.ToByteArray();
 
-            // .NET Guid byte layout (on little-endian systems):
-            // bytes[0-3]: 'a' component (stored little-endian, but represents big-endian wire bytes 0-3)
-            // bytes[4-5]: 'b' component (stored little-endian, but represents big-endian wire bytes 4-5)
-            // bytes[6-7]: 'c' component (stored little-endian)
-            // bytes[8-15]: d through k (stored as-is)
-
-            // To get the 48-bit timestamp, we need to reverse the endianness for a and b components
-            // Wire format bytes 0-5 contain the timestamp
+            // .NET Guid byte layout (platform-independent, defined by RFC 4122):
+            // bytes[0-3]: 'a' component (stored as little-endian in memory)
+            // bytes[4-5]: 'b' component (stored as little-endian in memory)
+            // bytes[6-7]: 'c' component (stored as little-endian in memory)
+            // bytes[8-15]: d through k (stored as-is, big-endian)
+            //
+            // To get the 48-bit timestamp, we reverse the byte order for a and b components
+            // to reconstruct the RFC 9562 wire format bytes 0-5
 
             // Convert from .NET format back to wire format for timestamp extraction
             byte[] wireBytes = new byte[6];

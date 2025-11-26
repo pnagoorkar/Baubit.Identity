@@ -130,5 +130,59 @@ namespace Baubit.Identity.Tests
             var refTimestamp = reference.ExtractTimestampMs();
             Assert.True(monotonicIds.Select(id => id.ExtractTimestampMs()).Min() > refTimestamp); // the earliest generated guid is still - in time - later than the reference
         }
+
+        [Fact]
+        public void CanInitializeFromDateTimeOffset()
+        {
+            var generator = GuidV7Generator.CreateNew();
+            var futureTime = DateTimeOffset.UtcNow.AddHours(1);
+            var futureMs = futureTime.ToUnixTimeMilliseconds();
+
+            generator.InitializeFrom(futureTime);
+
+            Assert.Equal(futureMs, generator.LastIssuedUnixMs);
+        }
+
+        [Fact]
+        public void DriftCapClampsTimestamp()
+        {
+            var baseTime = DateTimeOffset.UtcNow;
+            var reference = GuidV7.CreateVersion7(baseTime);
+            var generator = GuidV7Generator.CreateNew(reference, maxDriftMs: 10, throwOnDriftCap: false);
+
+            // Generate many IDs at the same timestamp to force drift beyond cap
+            for (int i = 0; i < 20; i++)
+            {
+                generator.GetNext(baseTime);
+            }
+
+            // The drift should be clamped - last issued should not exceed baseTime + 10ms
+            var maxExpected = baseTime.ToUnixTimeMilliseconds() + 10;
+            Assert.True(generator.LastIssuedUnixMs <= maxExpected + 1);
+        }
+
+        [Fact]
+        public void DriftCapThrowsWhenConfigured()
+        {
+            var baseTime = DateTimeOffset.UtcNow;
+            var reference = GuidV7.CreateVersion7(baseTime);
+            var generator = GuidV7Generator.CreateNew(reference, maxDriftMs: 5, throwOnDriftCap: true);
+
+            // Generate IDs to force drift
+            Assert.Throws<InvalidOperationException>(() =>
+            {
+                for (int i = 0; i < 20; i++)
+                {
+                    generator.GetNext(baseTime);
+                }
+            });
+        }
+
+        [Fact]
+        public void ExtractTimestampMs_ReturnsNullForNonV7Guid()
+        {
+            var nonV7Guid = Guid.NewGuid();
+            Assert.Null(nonV7Guid.ExtractTimestampMs());
+        }
     }
 }
