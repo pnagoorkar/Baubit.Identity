@@ -150,7 +150,7 @@ jobs:
       - run:
           name: Test
           command: |
-            SOLUTION_FILE="${SOLUTION_FOLDER}.sln"                
+            SOLUTION_FILE="${SOLUTION_FOLDER}.slnx"                
             dotnet test ${SOLUTION_FILE} \
               --collect:"XPlat Code Coverage" \
               --results-directory ./TestResults/ \
