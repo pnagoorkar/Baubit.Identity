@@ -83,7 +83,7 @@ namespace Baubit.Identity
                     break; // reserved "next"
             }
 
-            return GuidV7.CreateVersion7(DateTimeOffset.FromUnixTimeMilliseconds(next));
+            return GuidV7.CreateVersion7Core(next);
         }
 
         /// <summary>Extract the Unix milliseconds (48-bit) from a UUIDv7.</summary>
