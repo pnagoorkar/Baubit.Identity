@@ -71,13 +71,21 @@ if (GuidV7.TryGetUnixMs(guid, out long ms))
 
 ## Performance
 
-Benchmarks comparing Baubit.Identity against .NET 9's built-in `Guid.CreateVersion7()`:
+Benchmarks comparing Baubit.Identity against .NET 9's built-in `Guid.CreateVersion7()` (Intel Core Ultra 9 185H, Windows 11):
 
-| Method | Mean | Allocated |
-|--------|------|-----------|
-| .NET 9 CreateVersion7() | 704 ns | 0 B |
-| Baubit CreateVersion7() | 1,195 ns | 0 B |
-| Baubit Generator GetNext() | 1,194 ns | 0 B |
+| Method | Mean | Ratio | Allocated |
+|--------|------|-------|-----------|
+| .NET 9 CreateVersion7() | 67.09 ns | -11% | 0 B |
+| Baubit CreateVersion7() | 75.40 ns | baseline | 0 B |
+| Baubit Generator GetNext() | 78.54 ns | +4% | 0 B |
+
+**Key Highlights**:
+- **Zero allocations** - All methods produce zero heap allocations
+- **Competitive performance** - Within 11% of .NET 9's native implementation
+- **Monotonic guarantee** - Generator provides strict ordering at only 4% cost
+- **.NET Standard 2.0** - Broad compatibility with minimal performance trade-off
+
+For detailed benchmark results, analysis, and hardware specifications, see [Performance Report](Baubit.Identity.Benchmarks/PERFORMANCE.md).
 
 **Note**: Baubit.Identity targets .NET Standard 2.0 for broad compatibility. The implementation uses cryptographically secure random number generation (`RandomNumberGenerator`) with thread-local caching for zero allocations.
 

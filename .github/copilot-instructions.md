@@ -267,7 +267,7 @@ Before committing code:
 1. Profile first - identify bottlenecks with data
 2. Write benchmarks using BenchmarkDotNet (optional but recommended)
 3. Test before and after performance changes
-4. Document performance improvements in PR
+4. Document performance improvements in PR and readme files. Always include the ops/sec column.
 5. Ensure optimizations don't sacrifice readability or maintainability
 6. Consider caching, object pooling, or lazy initialization patterns
 
