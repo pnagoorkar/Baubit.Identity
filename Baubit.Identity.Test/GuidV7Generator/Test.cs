@@ -183,5 +183,146 @@ namespace Baubit.Identity.Test.GuidV7Generator
             var nonV7Guid = Guid.NewGuid();
             Assert.Null(nonV7Guid.ExtractTimestampMs());
         }
+
+        [Fact]
+        public void ExtractTimestampMs_ReturnsTimestampForV7Guid()
+        {
+            var timestamp = DateTimeOffset.UtcNow;
+            var expectedMs = timestamp.ToUnixTimeMilliseconds();
+            var guid = Identity.GuidV7.CreateVersion7(timestamp);
+
+            var extractedMs = guid.ExtractTimestampMs();
+
+            Assert.NotNull(extractedMs);
+            Assert.Equal(expectedMs, extractedMs.Value);
+        }
+
+        [Fact]
+        public void MaxDriftMs_CanBeSetAndRetrieved()
+        {
+            var generator = Baubit.Identity.GuidV7Generator.CreateNew();
+
+            generator.MaxDriftMs = 100;
+            Assert.Equal(100, generator.MaxDriftMs);
+
+            generator.MaxDriftMs = null;
+            Assert.Null(generator.MaxDriftMs);
+        }
+
+        [Fact]
+        public void ThrowOnDriftCap_CanBeSetAndRetrieved()
+        {
+            var generator = Baubit.Identity.GuidV7Generator.CreateNew();
+
+            generator.ThrowOnDriftCap = true;
+            Assert.True(generator.ThrowOnDriftCap);
+
+            generator.ThrowOnDriftCap = false;
+            Assert.False(generator.ThrowOnDriftCap);
+        }
+
+        [Fact]
+        public void CreateNew_InitializesPropertiesCorrectly()
+        {
+            var generator = Baubit.Identity.GuidV7Generator.CreateNew(maxDriftMs: 50, throwOnDriftCap: true);
+
+            Assert.Equal(50, generator.MaxDriftMs);
+            Assert.True(generator.ThrowOnDriftCap);
+        }
+
+        [Fact]
+        public void InitializeFrom_DoesNotRegressWithOlderTimestamp()
+        {
+            var futureTime = DateTimeOffset.UtcNow.AddHours(1);
+            var futureGuid = Identity.GuidV7.CreateVersion7(futureTime);
+            var generator = Baubit.Identity.GuidV7Generator.CreateNew(futureGuid);
+            var futureMs = futureTime.ToUnixTimeMilliseconds();
+
+            Assert.Equal(futureMs, generator.LastIssuedUnixMs);
+
+            var pastTime = DateTimeOffset.UtcNow.AddMinutes(-30);
+            var pastGuid = Identity.GuidV7.CreateVersion7(pastTime);
+
+            generator.InitializeFrom(pastGuid);
+
+            Assert.Equal(futureMs, generator.LastIssuedUnixMs);
+        }
+
+        [Fact]
+        public void InitializeFrom_DateTimeOffset_DoesNotRegressWithOlderTimestamp()
+        {
+            var futureTime = DateTimeOffset.UtcNow.AddHours(1);
+            var generator = Baubit.Identity.GuidV7Generator.CreateNew();
+            generator.InitializeFrom(futureTime);
+            var futureMs = futureTime.ToUnixTimeMilliseconds();
+
+            Assert.Equal(futureMs, generator.LastIssuedUnixMs);
+
+            var pastTime = DateTimeOffset.UtcNow.AddMinutes(-30);
+            generator.InitializeFrom(pastTime);
+
+            Assert.Equal(futureMs, generator.LastIssuedUnixMs);
+        }
+
+        [Fact]
+        public void InitializeFrom_ThreadSafety()
+        {
+            var generator = Baubit.Identity.GuidV7Generator.CreateNew();
+            var baseTime = DateTimeOffset.UtcNow;
+            var times = new DateTimeOffset[100];
+
+            for (int i = 0; i < times.Length; i++)
+            {
+                times[i] = baseTime.AddMilliseconds(i);
+            }
+
+            Parallel.ForEach(times, time =>
+            {
+                generator.InitializeFrom(time);
+            });
+
+            var maxExpectedMs = times.Max(t => t.ToUnixTimeMilliseconds());
+            Assert.Equal(maxExpectedMs, generator.LastIssuedUnixMs);
+        }
+
+        [Fact]
+        public void InitializeFrom_Guid_ThreadSafety()
+        {
+            var generator = Baubit.Identity.GuidV7Generator.CreateNew();
+            var baseTime = DateTimeOffset.UtcNow;
+            var guids = new Guid[100];
+
+            for (int i = 0; i < guids.Length; i++)
+            {
+                guids[i] = Identity.GuidV7.CreateVersion7(baseTime.AddMilliseconds(i));
+            }
+
+            Parallel.ForEach(guids, guid =>
+            {
+                generator.InitializeFrom(guid);
+            });
+
+            var maxExpectedMs = baseTime.AddMilliseconds(guids.Length - 1).ToUnixTimeMilliseconds();
+            Assert.Equal(maxExpectedMs, generator.LastIssuedUnixMs);
+        }
+
+        [Fact]
+        public void TryGetUnixMs_DelegatesCorrectly()
+        {
+            var timestamp = DateTimeOffset.UtcNow;
+            var guid = Identity.GuidV7.CreateVersion7(timestamp);
+
+            Assert.True(Baubit.Identity.GuidV7Generator.TryGetUnixMs(guid, out long ms));
+            Assert.Equal(timestamp.ToUnixTimeMilliseconds(), ms);
+        }
+
+        [Fact]
+        public void TryGetUnixMs_ReturnsFalseForNonV7()
+        {
+            var guid = Guid.NewGuid();
+
+            Assert.False(Baubit.Identity.GuidV7Generator.TryGetUnixMs(guid, out long ms));
+            Assert.Equal(0, ms);
+        }
     }
 }

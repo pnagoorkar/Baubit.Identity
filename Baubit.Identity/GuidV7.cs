@@ -1,5 +1,6 @@
 using System;
 using System.Security.Cryptography;
+using System.Threading;
 
 namespace Baubit.Identity
 {
@@ -9,6 +10,15 @@ namespace Baubit.Identity
     /// </summary>
     public static class GuidV7
     {
+        // Thread-local RandomNumberGenerator to avoid creating a new instance per call.
+        // Not disposed intentionally - these are static resources meant to live for application lifetime.
+        private static readonly ThreadLocal<RandomNumberGenerator> s_rng = 
+            new ThreadLocal<RandomNumberGenerator>(RandomNumberGenerator.Create, trackAllValues: false);
+
+        // Thread-local byte array for random bytes to avoid allocation per call
+        private static readonly ThreadLocal<byte[]> s_randomBuffer = 
+            new ThreadLocal<byte[]>(() => new byte[10], trackAllValues: false);
+
         /// <summary>
         /// Creates an RFC 9562 compliant UUIDv7 using the current UTC time.
         /// </summary>
@@ -25,8 +35,14 @@ namespace Baubit.Identity
         /// <returns>A new UUIDv7 GUID with the specified timestamp.</returns>
         public static Guid CreateVersion7(DateTimeOffset timestamp)
         {
-            long unixMs = timestamp.ToUnixTimeMilliseconds();
+            return CreateVersion7Core(timestamp.ToUnixTimeMilliseconds());
+        }
 
+        /// <summary>
+        /// Creates an RFC 9562 compliant UUIDv7 from a Unix timestamp in milliseconds.
+        /// </summary>
+        internal static Guid CreateVersion7Core(long unixMs)
+        {
             // RFC 9562 UUIDv7 structure (128 bits):
             // 0-47:   48-bit Unix timestamp in milliseconds (big-endian in wire format)
             // 48-51:  4-bit version (0111 = 7)
@@ -34,58 +50,35 @@ namespace Baubit.Identity
             // 64-65:  2-bit variant (10)
             // 66-127: 62-bit random
 
-            // We need 10 random bytes: 12 bits (2 bytes, but only 12 bits used) + 62 bits (8 bytes, but only 62 bits used)
-            // Actually: 74 bits of random = 10 bytes (80 bits), mask off what we need
-            byte[] randomBytes = new byte[10];
-            using (var rng = RandomNumberGenerator.Create())
-            {
-                rng.GetBytes(randomBytes);
-            }
+            // Use thread-local RNG and buffer to avoid allocations
+            var rng = s_rng.Value ?? throw new InvalidOperationException("Failed to initialize thread-local RandomNumberGenerator");
+            var randomBytes = s_randomBuffer.Value ?? throw new InvalidOperationException("Failed to initialize thread-local random buffer");
+            rng.GetBytes(randomBytes);
 
-            // Build the 16-byte array in RFC 4122 big-endian wire format
-            byte[] bytes = new byte[16];
+            // Build GUID directly from random bytes and timestamp
+            // d-k (bytes 8-15) with variant bits set
+            byte d = (byte)(0x80 | (randomBytes[2] & 0x3F)); // variant (10) + 6 random bits
+            byte e = randomBytes[3];
+            byte f = randomBytes[4];
+            byte g = randomBytes[5];
+            byte h = randomBytes[6];
+            byte i = randomBytes[7];
+            byte j = randomBytes[8];
+            byte k = randomBytes[9];
 
-            // Bytes 0-5: 48-bit Unix timestamp (big-endian)
-            bytes[0] = (byte)((unixMs >> 40) & 0xFF);
-            bytes[1] = (byte)((unixMs >> 32) & 0xFF);
-            bytes[2] = (byte)((unixMs >> 24) & 0xFF);
-            bytes[3] = (byte)((unixMs >> 16) & 0xFF);
-            bytes[4] = (byte)((unixMs >> 8) & 0xFF);
-            bytes[5] = (byte)(unixMs & 0xFF);
+            // Construct 'a' component from timestamp bytes 0-3 (big-endian in wire, needs conversion)
+            int a = (int)(((unixMs >> 40) & 0xFF) << 24) |
+                    (int)(((unixMs >> 32) & 0xFF) << 16) |
+                    (int)(((unixMs >> 24) & 0xFF) << 8) |
+                    (int)((unixMs >> 16) & 0xFF);
 
-            // Byte 6: version (7) in high nibble + 4 bits of random in low nibble
-            bytes[6] = (byte)(0x70 | (randomBytes[0] & 0x0F));
+            // Construct 'b' component from timestamp bytes 4-5
+            short b = (short)(((unixMs >> 8) & 0xFF) << 8 | (unixMs & 0xFF));
 
-            // Byte 7: 8 bits of random
-            bytes[7] = randomBytes[1];
+            // Construct 'c' component: version (7) in high nibble + random
+            short c = (short)((0x70 | (randomBytes[0] & 0x0F)) << 8 | randomBytes[1]);
 
-            // Byte 8: variant (10) in high 2 bits + 6 bits of random
-            bytes[8] = (byte)(0x80 | (randomBytes[2] & 0x3F));
-
-            // Bytes 9-15: 56 bits of random
-            bytes[9] = randomBytes[3];
-            bytes[10] = randomBytes[4];
-            bytes[11] = randomBytes[5];
-            bytes[12] = randomBytes[6];
-            bytes[13] = randomBytes[7];
-            bytes[14] = randomBytes[8];
-            bytes[15] = randomBytes[9];
-
-            // Convert from RFC 4122 big-endian wire format to .NET Guid format
-            // .NET Guid constructor expects: a (int), b (short), c (short), d-k (8 bytes)
-            // The first 8 bytes (a, b, c) are stored in little-endian on little-endian systems
-            // We need to convert from big-endian wire format to the expected format
-            return new Guid(
-                // a (bytes 0-3, big-endian in wire) -> int (stored as little-endian by .NET on LE systems)
-                (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3],
-                // b (bytes 4-5, big-endian in wire) -> short
-                (short)((bytes[4] << 8) | bytes[5]),
-                // c (bytes 6-7, big-endian in wire) -> short
-                (short)((bytes[6] << 8) | bytes[7]),
-                // d-k (bytes 8-15) are stored as-is
-                bytes[8], bytes[9], bytes[10], bytes[11],
-                bytes[12], bytes[13], bytes[14], bytes[15]
-            );
+            return new Guid(a, b, c, d, e, f, g, h, i, j, k);
         }
 
         /// <summary>
@@ -119,42 +112,30 @@ namespace Baubit.Identity
         /// <returns>true if the GUID is version 7 and the timestamp was extracted; otherwise, false.</returns>
         public static bool TryGetUnixMs(Guid guid, out long ms)
         {
-            if (!IsVersion7(guid))
+            byte[] bytes = guid.ToByteArray();
+
+            // Check version first (high nibble of byte 7)
+            int version = (bytes[7] >> 4) & 0x0F;
+            if (version != 7)
             {
                 ms = 0;
                 return false;
             }
 
-            byte[] bytes = guid.ToByteArray();
-
             // .NET Guid byte layout (platform-independent, defined by RFC 4122):
             // bytes[0-3]: 'a' component (stored as little-endian in memory)
             // bytes[4-5]: 'b' component (stored as little-endian in memory)
-            // bytes[6-7]: 'c' component (stored as little-endian in memory)
-            // bytes[8-15]: d through k (stored as-is, big-endian)
             //
-            // To get the 48-bit timestamp, we reverse the byte order for a and b components
-            // to reconstruct the RFC 9562 wire format bytes 0-5
-
-            // Convert from .NET format back to wire format for timestamp extraction
-            byte[] wireBytes = new byte[6];
+            // Extract timestamp directly without intermediate array
             // 'a' is bytes[0-3] in little-endian, wire format is big-endian
-            wireBytes[0] = bytes[3];
-            wireBytes[1] = bytes[2];
-            wireBytes[2] = bytes[1];
-            wireBytes[3] = bytes[0];
             // 'b' is bytes[4-5] in little-endian, wire format is big-endian
-            wireBytes[4] = bytes[5];
-            wireBytes[5] = bytes[4];
-
-            // Now wireBytes[0-5] contains the 48-bit timestamp in big-endian
             ulong timestamp =
-                ((ulong)wireBytes[0] << 40) |
-                ((ulong)wireBytes[1] << 32) |
-                ((ulong)wireBytes[2] << 24) |
-                ((ulong)wireBytes[3] << 16) |
-                ((ulong)wireBytes[4] << 8) |
-                (ulong)wireBytes[5];
+                ((ulong)bytes[3] << 40) |
+                ((ulong)bytes[2] << 32) |
+                ((ulong)bytes[1] << 24) |
+                ((ulong)bytes[0] << 16) |
+                ((ulong)bytes[5] << 8) |
+                (ulong)bytes[4];
 
             ms = (long)timestamp;
             return true;

@@ -6,4 +6,5 @@
   </Folder>
   <Project Path="Baubit.Identity.Test/Baubit.Identity.Test.csproj" />
   <Project Path="Baubit.Identity/Baubit.Identity.csproj" />
+  <Project Path="Baubit.Identity.Benchmarks/Baubit.Identity.Benchmarks.csproj" />
 </Solution>
