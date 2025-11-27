@@ -11,7 +11,9 @@ namespace Baubit.Identity
     public static class GuidV7
     {
 #if NETSTANDARD2_0
-        // Thread-local RandomNumberGenerator for .NET Standard 2.0
+        // Thread-local RandomNumberGenerator for .NET Standard 2.0.
+        // Not disposed intentionally - these are static resources meant to live for application lifetime.
+        // The factory function always returns a valid instance.
         private static readonly ThreadLocal<RandomNumberGenerator> s_rng = 
             new ThreadLocal<RandomNumberGenerator>(() => RandomNumberGenerator.Create(), trackAllValues: false);
 
@@ -84,8 +86,9 @@ namespace Baubit.Identity
             return new Guid(a, b, c, d, e, f, g, h, i, j, k);
 #else
             // .NET Standard 2.0: Use thread-local buffers to reduce allocations
-            var rng = s_rng.Value!;
-            var randomBytes = s_randomBuffer.Value!;
+            // The factory functions guarantee non-null values, but we add defensive checks
+            var rng = s_rng.Value ?? throw new InvalidOperationException("RandomNumberGenerator not initialized");
+            var randomBytes = s_randomBuffer.Value ?? throw new InvalidOperationException("Random buffer not initialized");
             rng.GetBytes(randomBytes);
 
             // d-k (bytes 8-15) with variant bits set
