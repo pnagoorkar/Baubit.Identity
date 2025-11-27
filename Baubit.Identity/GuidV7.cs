@@ -13,7 +13,7 @@ namespace Baubit.Identity
         // Thread-local RandomNumberGenerator to avoid creating a new instance per call.
         // Not disposed intentionally - these are static resources meant to live for application lifetime.
         private static readonly ThreadLocal<RandomNumberGenerator> s_rng = 
-            new ThreadLocal<RandomNumberGenerator>(() => RandomNumberGenerator.Create(), trackAllValues: false);
+            new ThreadLocal<RandomNumberGenerator>(RandomNumberGenerator.Create, trackAllValues: false);
 
         // Thread-local byte array for random bytes to avoid allocation per call
         private static readonly ThreadLocal<byte[]> s_randomBuffer = 
