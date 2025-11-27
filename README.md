@@ -75,11 +75,11 @@ Benchmarks comparing Baubit.Identity against .NET 9's built-in `Guid.CreateVersi
 
 | Method | Mean | Allocated |
 |--------|------|-----------|
-| .NET 9 CreateVersion7() | 709 ns | 0 B |
-| Baubit CreateVersion7() | 1,203 ns | 80 B |
-| Baubit Generator GetNext() | 1,237 ns | 80 B |
+| .NET 9 CreateVersion7() | 704 ns | 0 B |
+| Baubit CreateVersion7() | 1,195 ns | 0 B |
+| Baubit Generator GetNext() | 1,194 ns | 0 B |
 
-**Note**: Baubit.Identity targets .NET Standard 2.0 for broad compatibility, which limits performance optimizations available in newer runtimes. The implementation uses cryptographically secure random number generation (`RandomNumberGenerator`) for RFC 9562 compliance.
+**Note**: Baubit.Identity targets .NET Standard 2.0 for broad compatibility. The implementation uses cryptographically secure random number generation (`RandomNumberGenerator`) with thread-local caching for zero allocations.
 
 ## License
 
