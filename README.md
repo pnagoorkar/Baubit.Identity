@@ -69,6 +69,18 @@ if (GuidV7.TryGetUnixMs(guid, out long ms))
 
 - `ExtractTimestampMs(this Guid guid)` - Extension to extract timestamp
 
+## Performance
+
+Benchmarks comparing Baubit.Identity against .NET 9's built-in `Guid.CreateVersion7()`:
+
+| Method | Mean | Allocated |
+|--------|------|-----------|
+| .NET 9 CreateVersion7() | 709 ns | 0 B |
+| Baubit CreateVersion7() | 1,203 ns | 80 B |
+| Baubit Generator GetNext() | 1,237 ns | 80 B |
+
+**Note**: Baubit.Identity targets .NET Standard 2.0 for broad compatibility, which limits performance optimizations available in newer runtimes. The implementation uses cryptographically secure random number generation (`RandomNumberGenerator`) for RFC 9562 compliance.
+
 ## License
 
 MIT License - see [LICENSE](LICENSE)
