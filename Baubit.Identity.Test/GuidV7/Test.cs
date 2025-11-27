@@ -250,5 +250,66 @@ namespace Baubit.Identity.Test.GuidV7
             Assert.True(Identity.GuidV7.IsVersion7(generatedGuid));
             Assert.True(Identity.GuidV7.TryGetUnixMs(generatedGuid, out _));
         }
+
+        [Fact]
+        public void CreateVersion7_MaxTimestamp_HandlesCorrectly()
+        {
+            var maxSafeTimestamp = new DateTimeOffset(2200, 1, 1, 0, 0, 0, TimeSpan.Zero);
+            var guid = Identity.GuidV7.CreateVersion7(maxSafeTimestamp);
+
+            Assert.True(Identity.GuidV7.IsVersion7(guid));
+            Assert.True(Identity.GuidV7.TryGetUnixMs(guid, out long extractedMs));
+            Assert.Equal(maxSafeTimestamp.ToUnixTimeMilliseconds(), extractedMs);
+        }
+
+        [Fact]
+        public void IsVersion7_Version4Guid_ReturnsFalse()
+        {
+            var guidV4 = Guid.NewGuid();
+            byte[] bytes = guidV4.ToByteArray();
+            int version = (bytes[7] >> 4) & 0x0F;
+
+            Assert.Equal(4, version);
+            Assert.False(Identity.GuidV7.IsVersion7(guidV4));
+        }
+
+        [Fact]
+        public void CreateVersion7_ConsistentAcrossMultipleThreads()
+        {
+            const int iterations = 1000;
+            var timestamp = DateTimeOffset.UtcNow;
+            var guids = new ConcurrentBag<Guid>();
+
+            Parallel.For(0, iterations, _ =>
+            {
+                var guid = Identity.GuidV7.CreateVersion7(timestamp);
+                guids.Add(guid);
+
+                Assert.True(Identity.GuidV7.IsVersion7(guid));
+                Assert.True(Identity.GuidV7.TryGetUnixMs(guid, out long ms));
+                Assert.Equal(timestamp.ToUnixTimeMilliseconds(), ms);
+            });
+
+            Assert.Equal(iterations, guids.Count);
+            Assert.Equal(iterations, guids.Distinct().Count());
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(5)]
+        [InlineData(6)]
+        [InlineData(8)]
+        public void IsVersion7_OtherVersions_ReturnFalse(int version)
+        {
+            var guid = Identity.GuidV7.CreateVersion7();
+            byte[] bytes = guid.ToByteArray();
+
+            bytes[7] = (byte)((bytes[7] & 0x0F) | (version << 4));
+            var modifiedGuid = new Guid(bytes);
+
+            Assert.False(Identity.GuidV7.IsVersion7(modifiedGuid));
+        }
     }
 }
