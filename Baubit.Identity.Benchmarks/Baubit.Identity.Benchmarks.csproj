@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+    <PackageReference Include="FastGuid" Version="1.4.1" />
   </ItemGroup>
 
   <ItemGroup>

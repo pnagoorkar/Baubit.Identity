@@ -4,6 +4,7 @@ using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Order;
 using BenchmarkDotNet.Reports;
 using BenchmarkDotNet.Running;
+using SecurityDriven;
 
 namespace Baubit.Identity.Benchmarks;
 
@@ -77,5 +78,25 @@ public class GuidV7Benchmarks
     public Guid Baubit_Generator_GetNext_WithTimestamp()
     {
         return _generator.GetNext(_fixedTimestamp);
+    }
+
+    // ---- FastGuid comparison ----
+
+    [Benchmark(Description = "FastGuid NewGuid()")]
+    public Guid FastGuid_NewGuid()
+    {
+        return FastGuid.NewGuid();
+    }
+
+    [Benchmark(Description = "FastGuid NewSqlServerGuid()")]
+    public Guid FastGuid_NewSqlServerGuid()
+    {
+        return FastGuid.NewSqlServerGuid();
+    }
+
+    [Benchmark(Description = "FastGuid NewPostgreSqlGuid()")]
+    public Guid FastGuid_NewPostgreSqlGuid()
+    {
+        return FastGuid.NewPostgreSqlGuid();
     }
 }
