@@ -2,75 +2,113 @@
 
 ## System Configuration
 
-- **OS**: Windows 11 (10.0.26200.7171)
-- **CPU**: Intel(R) Core(TM) Ultra 9 185H
+- **OS**: Ubuntu 24.04.3 LTS (Noble Numbat)
+- **CPU**: AMD EPYC 7763, 1 CPU, 4 logical and 2 physical cores
 - **Architecture**: X64 RyuJIT AVX2
 - **.NET Runtime**: .NET 9.0.11 (9.0.1125.51716)
-- **GC Mode**: Non-concurrent Workstation
+- **GC Mode**: Concurrent Workstation
 - **Benchmark Tool**: BenchmarkDotNet v0.14.0
 
 ## Benchmark Results
 
 ### Summary
 
-| Method | Mean | Error | StdDev | Median | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
-|--------|------|-------|--------|--------|-------|---------|------|-----------|-------------|
-| .NET 9 CreateVersion7(timestamp) | 43.62 ns | 0.342 ns | 0.320 ns | 43.63 ns | -42% | 1.0% | 1 | - | NA |
-| Baubit CreateVersion7(timestamp) | 52.11 ns | 0.319 ns | 0.298 ns | 52.06 ns | -31% | 0.9% | 2 | - | NA |
-| Baubit Generator GetNext(timestamp) | 56.30 ns | 0.415 ns | 0.388 ns | 56.19 ns | -25% | 1.0% | 3 | - | NA |
-| .NET 9 CreateVersion7() | 67.09 ns | 1.355 ns | 2.611 ns | 65.63 ns | -11% | 3.9% | 4 | - | NA |
-| Baubit CreateVersion7() | 75.40 ns | 0.675 ns | 0.564 ns | 75.44 ns | baseline | - | 5 | - | NA |
-| Baubit Generator GetNext() | 78.54 ns | 1.003 ns | 0.938 ns | 78.70 ns | +4% | 1.4% | 6 | - | NA |
+| Method | Mean | Error | StdDev | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
+|--------|------|-------|--------|-------|---------|------|-----------|-------------|
+| FastGuid NewGuid() | 17.42 ns | 0.025 ns | 0.020 ns | -99% | 0.1% | 1 | - | NA |
+| FastGuid NewSqlServerGuid() | 49.54 ns | 0.018 ns | 0.015 ns | -96% | 0.1% | 2 | - | NA |
+| FastGuid NewPostgreSqlGuid() | 50.79 ns | 0.075 ns | 0.070 ns | -96% | 0.2% | 3 | - | NA |
+| .NET 9 CreateVersion7(timestamp) | 675.45 ns | 2.510 ns | 2.225 ns | -43% | 0.3% | 4 | - | NA |
+| .NET 9 CreateVersion7() | 698.53 ns | 1.490 ns | 1.244 ns | -41% | 0.2% | 5 | - | NA |
+| Baubit Generator GetNext(timestamp) | 1,160.19 ns | 4.231 ns | 3.751 ns | -3% | 0.3% | 6 | - | NA |
+| Baubit CreateVersion7(timestamp) | 1,178.69 ns | 1.684 ns | 1.493 ns | -1% | 0.2% | 6 | - | NA |
+| Baubit CreateVersion7() | 1,190.92 ns | 1.382 ns | 1.225 ns | baseline | - | 6 | - | NA |
+| Baubit Generator GetNext() | 1,194.04 ns | 2.757 ns | 2.152 ns | +0% | 0.2% | 6 | - | NA |
 
 ### Analysis
+
+#### FastGuid Comparison
+
+**FastGuid Performance**
+- **NewGuid()**: 17.42 ns Â± 0.025 ns - Random GUID generation
+- **NewSqlServerGuid()**: 49.54 ns Â± 0.018 ns - SQL Server-optimized sequential GUID
+- **NewPostgreSqlGuid()**: 50.79 ns Â± 0.075 ns - PostgreSQL-optimized sequential GUID
+
+FastGuid demonstrates exceptional raw performance for GUID generation, being **68x faster** than Baubit.Identity for random GUIDs. The database-optimized variants (NewSqlServerGuid and NewPostgreSqlGuid) are approximately **24x faster** than Baubit.Identity's UUIDv7 implementation.
+
+**Key Differences**:
+- FastGuid.NewGuid() generates random GUIDs without timestamp information
+- FastGuid's database-optimized GUIDs use custom byte ordering for specific database engines
+- Baubit.Identity focuses on RFC 9562-compliant UUIDv7 with embedded timestamps and monotonic guarantees
 
 #### Without Timestamp (Current Time)
 
 **Baubit.Identity (Baseline)**
-- **CreateVersion7()**: 75.40 ns ± 0.68 ns
-- **Generator GetNext()**: 78.54 ns ± 1.00 ns (monotonic guarantee)
+- **CreateVersion7()**: 1,190.92 ns Â± 1.38 ns
+- **Generator GetNext()**: 1,194.04 ns Â± 2.76 ns (monotonic guarantee)
 
-**NET 9 Built-in**
-- **CreateVersion7()**: 67.09 ns ± 1.36 ns
-- **11% faster** than Baubit's static method
-- **15% faster** than Baubit's monotonic generator
+**.NET 9 Built-in**
+- **CreateVersion7()**: 698.53 ns Â± 1.49 ns
+- **41% faster** than Baubit's static method
+- **41% faster** than Baubit's monotonic generator
 
 #### With Fixed Timestamp
 
 **Baubit.Identity**
-- **CreateVersion7(timestamp)**: 52.11 ns ± 0.32 ns
-- **Generator GetNext(timestamp)**: 56.30 ns ± 0.42 ns (monotonic guarantee)
+- **CreateVersion7(timestamp)**: 1,178.69 ns Â± 1.68 ns
+- **Generator GetNext(timestamp)**: 1,160.19 ns Â± 4.23 ns (monotonic guarantee)
 
 **.NET 9 Built-in**
-- **CreateVersion7(timestamp)**: 43.62 ns ± 0.34 ns
-- **16% faster** than Baubit's static method
-- **23% faster** than Baubit's monotonic generator
+- **CreateVersion7(timestamp)**: 675.45 ns Â± 2.51 ns
+- **43% faster** than Baubit's static method
+- **42% faster** than Baubit's monotonic generator
 
 ### Key Observations
 
 1. **Zero Allocations**: All methods produce zero heap allocations per operation, making them suitable for high-throughput scenarios.
 
-2. **Monotonic Guarantee Trade-off**: Baubit's `GuidV7Generator.GetNext()` provides strict monotonicity (guaranteed increasing order even at the same millisecond) at only ~4% performance cost compared to the non-monotonic static method.
+2. **FastGuid Speed**: FastGuid excels at raw GUID generation speed, being 68x faster for random GUIDs and 24x faster for database-optimized sequential GUIDs. However, FastGuid's optimizations are database-specific and don't follow the UUIDv7 RFC 9562 standard.
 
-3. **Competitive Performance**: Baubit.Identity performs within 11-23% of .NET 9's built-in implementation while targeting .NET Standard 2.0 for broad compatibility.
+3. **Monotonic Guarantee Trade-off**: Baubit's `GuidV7Generator.GetNext()` provides strict monotonicity (guaranteed increasing order even at the same millisecond) at minimal performance cost compared to the non-monotonic static method.
 
-4. **.NET Standard 2.0 Compatibility**: Baubit.Identity uses `RandomNumberGenerator` for cryptographically secure random number generation with thread-local caching, which explains the slight performance difference compared to .NET 9's native implementation.
+4. **.NET Standard 2.0 Compatibility**: Baubit.Identity uses `RandomNumberGenerator` for cryptographically secure random number generation with thread-local caching, which explains the performance difference compared to .NET 9's native implementation and FastGuid's optimized approach.
 
-5. **Fixed Timestamp Performance**: When using a pre-computed timestamp, both implementations are faster (43-56 ns range) compared to generating timestamps dynamically (67-79 ns range).
+5. **Standards Compliance**: Baubit.Identity prioritizes RFC 9562 UUIDv7 compliance with embedded timestamps and version bits, while FastGuid prioritizes raw performance with custom GUID formats for specific database engines.
+
+6. **Use Case Differentiation**:
+   - Use **FastGuid** when you need maximum performance and don't require RFC-compliant UUIDv7 or extractable timestamps
+   - Use **Baubit.Identity** when you need standards-compliant UUIDv7 with embedded timestamps, broad .NET compatibility, and monotonic guarantees
 
 ### Performance Characteristics
 
-- **Throughput**: Approximately 12-23 million GUIDs per second (single-threaded)
-- **Memory**: Zero heap allocations per operation
+- **Throughput**: 
+  - FastGuid: ~57 million GUIDs per second (NewGuid), ~20 million per second (database-optimized)
+  - Baubit.Identity: ~840,000 GUIDs per second (single-threaded)
+  - .NET 9: ~1.4 million GUIDs per second
+- **Memory**: Zero heap allocations per operation for all implementations
 - **Thread Safety**: Lock-free atomic operations with minimal contention
-- **Latency**: Consistent sub-100 nanosecond latency with low variance
+- **Latency**: 
+  - FastGuid: Sub-100 nanosecond latency
+  - Baubit.Identity: ~1.2 microsecond latency with low variance
 
 ### Recommendations
 
-- Use **`GuidV7Generator.GetNext()`** when strict monotonicity is required (distributed systems, database indexing)
-- Use **`GuidV7.CreateVersion7()`** when monotonicity is not critical and maximum performance is desired
-- Pre-compute timestamps when generating multiple GUIDs at the same logical time point
-- Both implementations are suitable for high-throughput production workloads
+- Use **FastGuid** when:
+  - You need maximum raw performance for GUID generation
+  - You're using SQL Server or PostgreSQL and want database-optimized sequential GUIDs
+  - You don't need RFC 9562 UUIDv7 compliance
+  - Timestamp extraction from the GUID is not required
+
+- Use **Baubit.Identity** when:
+  - You need RFC 9562-compliant UUIDv7 with embedded timestamps
+  - Strict monotonicity is required for distributed systems or database indexing
+  - Broad .NET compatibility (.NET Standard 2.0) is important
+  - You need to extract timestamps from generated GUIDs
+  - Standards compliance and interoperability with other UUIDv7 implementations matter
+
+- Use **.NET 9 Guid.CreateVersion7()** when:
+  - You're on .NET 9+ and need a good balance of performance and UUIDv7 compliance
+  - Monotonic guarantees are not critical
 
 ## Running Benchmarks
 
@@ -81,18 +119,13 @@ cd Baubit.Identity.Benchmarks
 dotnet run -c Release
 ```
 
-## Comparison with Previous Results
-
-Previous benchmarks (run on GitHub CI agent) showed significantly different performance characteristics:
-
-| Method (GitHub CI) | Mean | Allocated |
-|--------|------|-----------|
-| .NET 9 CreateVersion7() | 704 ns | 0 B |
-| Baubit CreateVersion7() | 1,195 ns | 0 B |
-| Baubit Generator GetNext() | 1,194 ns | 0 B |
-
-The local Intel Core Ultra 9 185H shows **9-16x better performance** compared to the GitHub CI agent, demonstrating the impact of hardware capabilities on GUID generation performance. This highlights the importance of running benchmarks on representative hardware.
-
 ## Conclusion
 
-Baubit.Identity delivers production-grade performance with zero allocations while maintaining .NET Standard 2.0 compatibility. The monotonic generator provides strict ordering guarantees with minimal performance overhead, making it ideal for distributed systems and scenarios requiring time-sortable identifiers.
+Baubit.Identity delivers production-grade performance with zero allocations while maintaining .NET Standard 2.0 compatibility and RFC 9562 UUIDv7 compliance. 
+
+**Performance Trade-offs**:
+- FastGuid offers superior raw performance (68x faster for random GUIDs) but sacrifices RFC compliance and timestamp extraction capabilities
+- .NET 9's built-in CreateVersion7() provides a middle ground with ~1.7x better performance than Baubit.Identity while maintaining UUIDv7 compliance
+- Baubit.Identity prioritizes standards compliance, broad .NET compatibility, and monotonic guarantees over raw performance
+
+The monotonic generator provides strict ordering guarantees with minimal performance overhead, making it ideal for distributed systems requiring time-sortable, standards-compliant identifiers across different .NET platforms.
