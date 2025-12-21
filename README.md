@@ -67,8 +67,8 @@ if (GuidV7.TryGetUnixMs(guid, out long ms))
 
 ### IdentityGenerator
 
-- `CreateNew(long? maxDriftMs, bool throwOnDriftCap)` - Create generator
-- `CreateNew(Guid existingV7, ...)` - Create generator seeded from existing UUIDv7
+- `CreateNew(long? maxDriftMs = null, bool throwOnDriftCap = false)` - Create generator with optional drift protection
+- `CreateNew(Guid existingV7, long? maxDriftMs = null, bool throwOnDriftCap = false)` - Create generator seeded from existing UUIDv7
 - `GetNext()` - Generate next monotonic GUID
 - `GetNext(DateTimeOffset timestampUtc)` - Generate monotonic GUID with specific timestamp
 - `InitializeFrom(Guid existingV7)` - Seed from existing version 7 GUID

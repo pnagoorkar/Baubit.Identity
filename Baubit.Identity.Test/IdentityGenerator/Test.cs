@@ -157,6 +157,11 @@ namespace Baubit.Identity.Test.IdentityGenerator
             Assert.Null(parallelLoopResult.LowestBreakIteration);
             Assert.Equal(numOfIds, monotonicIds.Count);
 
+            // Verify all GUIDs are fully unique
+            var distinctGuidCount = monotonicIds.Distinct().Count();
+            Assert.Equal(numOfIds, distinctGuidCount);
+
+            // Verify monotonic timestamps - each GUID has a distinct timestamp
             var distinctMonotonicIdCount = monotonicIds.DistinctBy(id => id.ExtractTimestampMs()).Count();
             Assert.Equal(numOfIds, distinctMonotonicIdCount);
         }
@@ -344,6 +349,11 @@ namespace Baubit.Identity.Test.IdentityGenerator
             Assert.Null(parallelLoopResult.LowestBreakIteration);
             Assert.Equal(numOfIds, monotonicIds.Count);
 
+            // Verify all GUIDs are fully unique
+            var distinctGuidCount = monotonicIds.Distinct().Count();
+            Assert.Equal(numOfIds, distinctGuidCount);
+
+            // Verify monotonic timestamps - each GUID has a distinct timestamp
             var distinctIdCount = monotonicIds.DistinctBy(id => id.ExtractTimestampMs()).Count();
             Assert.Equal(numOfIds, distinctIdCount);
             
