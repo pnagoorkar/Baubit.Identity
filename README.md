@@ -3,14 +3,16 @@
 [![CircleCI](https://dl.circleci.com/status-badge/img/circleci/TpM4QUH8Djox7cjDaNpup5/2zTgJzKbD2m3nXCf5LKvqS/tree/master.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/circleci/TpM4QUH8Djox7cjDaNpup5/2zTgJzKbD2m3nXCf5LKvqS/tree/master)
 [![codecov](https://codecov.io/gh/pnagoorkar/Baubit.Identity/branch/master/graph/badge.svg)](https://codecov.io/gh/pnagoorkar/Baubit.Identity)<br/>
 [![NuGet](https://img.shields.io/nuget/v/Baubit.Identity.svg)](https://www.nuget.org/packages/Baubit.Identity/)
-![.NET Standard 2.0](https://img.shields.io/badge/.NET%20Standard-2.0-512BD4?logo=dotnet&logoColor=white)<br/>
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![NuGet](https://img.shields.io/nuget/dt/Baubit.Identity.svg)](https://www.nuget.org/packages/Baubit.Identity) <br/>
+![.NET Standard 2.0](https://img.shields.io/badge/.NET%20Standard-2.0-512BD4?logo=dotnet&logoColor=white)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)<br/>
 [![Known Vulnerabilities](https://snyk.io/test/github/pnagoorkar/Baubit.Identity/badge.svg)](https://snyk.io/test/github/pnagoorkar/Baubit.Identity)
 
 A monotonic GuidV7 (UUIDv7) generator for .NET. Generates strictly increasing unique identifiers for distributed systems.
 
 ## Features
 
+- **Interface-based Design**: `IIdentityGenerator` interface for abstraction and testability
 - **Monotonic Guarantees**: Strictly increasing UUIDv7 identifiers, even at the same millisecond
 - **Thread-Safe**: Lock-free implementation using atomic operations
 - **Drift Protection**: Optional drift cap for clock skew handling
@@ -29,13 +31,20 @@ dotnet add package Baubit.Identity
 ```csharp
 using Baubit.Identity;
 
-// Create a generator
-var generator = GuidV7Generator.CreateNew();
+// Create a generator using the interface
+IIdentityGenerator generator = IdentityGenerator.CreateNew();
 
 // Generate monotonic GuidV7 values
 var id1 = generator.GetNext();
 var id2 = generator.GetNext();
 // id1 < id2 (strictly increasing)
+
+// Seed from existing GUID or timestamp
+var existingId = GuidV7.CreateVersion7();
+generator.InitializeFrom(existingId);
+
+// Or seed from timestamp
+generator.InitializeFrom(DateTimeOffset.UtcNow.AddHours(-1));
 
 // Create UUIDv7 directly
 var guid = GuidV7.CreateVersion7();
@@ -48,6 +57,22 @@ if (GuidV7.TryGetUnixMs(guid, out long ms))
 ```
 
 ## API Reference
+
+### IIdentityGenerator (Interface)
+
+- `GetNext()` - Generate next monotonic GUID using current UTC time
+- `GetNext(DateTimeOffset timestampUtc)` - Generate monotonic GUID with specific timestamp
+- `InitializeFrom(Guid existingV7)` - Seed from existing version 7 GUID
+- `InitializeFrom(DateTimeOffset timestampUtc)` - Seed from specific UTC timestamp
+
+### IdentityGenerator
+
+- `CreateNew(long? maxDriftMs = null, bool throwOnDriftCap = false)` - Create generator with optional drift protection
+- `CreateNew(Guid existingV7, long? maxDriftMs = null, bool throwOnDriftCap = false)` - Create generator seeded from existing UUIDv7
+- `GetNext()` - Generate next monotonic GUID
+- `GetNext(DateTimeOffset timestampUtc)` - Generate monotonic GUID with specific timestamp
+- `InitializeFrom(Guid existingV7)` - Seed from existing version 7 GUID
+- `InitializeFrom(DateTimeOffset timestampUtc)` - Seed from specific UTC timestamp
 
 ### GuidV7 (Static)
 
