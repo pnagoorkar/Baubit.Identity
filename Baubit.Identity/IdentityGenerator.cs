@@ -8,6 +8,9 @@ namespace Baubit.Identity
     /// </summary>
     public sealed class IdentityGenerator : IIdentityGenerator
     {
+        /// <summary>
+        /// The underlying GuidV7Generator instance that performs the actual GUID generation.
+        /// </summary>
         private readonly GuidV7Generator _generator;
 
         /// <summary>
