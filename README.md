@@ -12,6 +12,7 @@ A monotonic GuidV7 (UUIDv7) generator for .NET. Generates strictly increasing un
 
 ## Features
 
+- **Interface-based Design**: `IIdentityGenerator` interface for abstraction and testability
 - **Monotonic Guarantees**: Strictly increasing UUIDv7 identifiers, even at the same millisecond
 - **Thread-Safe**: Lock-free implementation using atomic operations
 - **Drift Protection**: Optional drift cap for clock skew handling
@@ -30,13 +31,20 @@ dotnet add package Baubit.Identity
 ```csharp
 using Baubit.Identity;
 
-// Create a generator
-var generator = GuidV7Generator.CreateNew();
+// Create a generator using the interface
+IIdentityGenerator generator = IdentityGenerator.CreateNew();
 
 // Generate monotonic GuidV7 values
 var id1 = generator.GetNext();
 var id2 = generator.GetNext();
 // id1 < id2 (strictly increasing)
+
+// Seed from existing GUID or timestamp
+var existingId = GuidV7.CreateVersion7();
+generator.InitializeFrom(existingId);
+
+// Or seed from timestamp
+generator.InitializeFrom(DateTimeOffset.UtcNow.AddHours(-1));
 
 // Create UUIDv7 directly
 var guid = GuidV7.CreateVersion7();
@@ -49,6 +57,22 @@ if (GuidV7.TryGetUnixMs(guid, out long ms))
 ```
 
 ## API Reference
+
+### IIdentityGenerator (Interface)
+
+- `GetNext()` - Generate next monotonic GUID using current UTC time
+- `GetNext(DateTimeOffset timestampUtc)` - Generate monotonic GUID with specific timestamp
+- `InitializeFrom(Guid existingV7)` - Seed from existing version 7 GUID
+- `InitializeFrom(DateTimeOffset timestampUtc)` - Seed from specific UTC timestamp
+
+### IdentityGenerator
+
+- `CreateNew(long? maxDriftMs = null, bool throwOnDriftCap = false)` - Create generator with optional drift protection
+- `CreateNew(Guid existingV7, long? maxDriftMs = null, bool throwOnDriftCap = false)` - Create generator seeded from existing UUIDv7
+- `GetNext()` - Generate next monotonic GUID
+- `GetNext(DateTimeOffset timestampUtc)` - Generate monotonic GUID with specific timestamp
+- `InitializeFrom(Guid existingV7)` - Seed from existing version 7 GUID
+- `InitializeFrom(DateTimeOffset timestampUtc)` - Seed from specific UTC timestamp
 
 ### GuidV7 (Static)
 
