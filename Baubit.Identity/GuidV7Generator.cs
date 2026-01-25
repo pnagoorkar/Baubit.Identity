@@ -6,7 +6,7 @@ namespace Baubit.Identity
     public sealed class GuidV7Generator
     {
         // Last emitted Unix timestamp (milliseconds). -1 means "not set".
-        private long _lastMs = -1;
+        private long lastMs = -1;
 
         /// <summary>Maximum allowed drift ahead of wall-clock (ms). Null = no cap.</summary>
         public long? MaxDriftMs { get; set; }
@@ -54,12 +54,12 @@ namespace Baubit.Identity
         public Guid GetNext(DateTimeOffset timestampUtc) => NewInternal(timestampUtc.ToUnixTimeMilliseconds());
 
         /// <summary>For diagnostics/tests only: last issued ms (or -1 if none).</summary>
-        public long LastIssuedUnixMs => Volatile.Read(ref _lastMs);
+        public long LastIssuedUnixMs => Volatile.Read(ref lastMs);
 
         private void Seed(long ms)
         {
-            long curr = Volatile.Read(ref _lastMs);
-            if (ms > curr) Volatile.Write(ref _lastMs, ms);
+            long curr = Volatile.Read(ref lastMs);
+            if (ms > curr) Volatile.Write(ref lastMs, ms);
         }
 
         private Guid NewInternal(long nowMs)
@@ -67,7 +67,7 @@ namespace Baubit.Identity
             long next;
             while (true)
             {
-                long last = Volatile.Read(ref _lastMs);
+                long last = Volatile.Read(ref lastMs);
                 next = (nowMs > last) ? nowMs : last + 1;
 
                 // Optional max-drift guard
@@ -79,7 +79,7 @@ namespace Baubit.Identity
                     next = nowMs + cap;
                 }
 
-                if (Interlocked.CompareExchange(ref _lastMs, next, last) == last)
+                if (Interlocked.CompareExchange(ref lastMs, next, last) == last)
                     break; // reserved "next"
             }
 
